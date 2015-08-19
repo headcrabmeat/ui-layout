@@ -1026,6 +1026,68 @@ angular.module('ui.layout', [])
             toggledDeffered.reject();
           } else {
             return false;
+          },
+          post: function(scope, element, attrs, ctrl) {
+            if(!element.hasClass('stretch')) element.addClass('stretch');
+            if(!element.hasClass('ui-layout-container')) element.addClass('ui-layout-container');
+
+            scope.$watch('container.size', function(newValue) {
+              element.css(ctrl.sizeProperties.sizeProperty, newValue + 'px');
+            });
+
+            scope.$watch('container.' + ctrl.sizeProperties.flowProperty, function(newValue) {
+              element.css(ctrl.sizeProperties.flowProperty, newValue + 'px');
+            });
+
+            // Any iframe blocks mouse events e.g. mousemove
+            // however touchmove is not intercepted
+            // there by we need to dispatch onmousemove inside out iframe
+            // block
+            var iframes = element.find("iframe");
+            for(var i=0; i < iframes.length; i++) {
+              var iframe = iframes[i];
+
+              iframe.contentWindow.onmousemove = function(e) {
+
+                // Create a new event for the this window
+                var evt = document.createEvent("MouseEvents");
+                // We'll need this to offset the mouse move appropriately
+                var boundingClientRect = iframe.getBoundingClientRect();
+
+                // Initialize the event, copying exiting event values
+                // for the most part
+                evt.initMouseEvent(
+                  "mousemove",
+                  true, // bubbles
+                  false, // not cancelable
+                  window,
+                  e.detail,
+                  e.screenX,
+                  e.screenY,
+                  e.clientX + boundingClientRect.left,
+                  e.clientY + boundingClientRect.top,
+                  e.ctrlKey,
+                  e.altKey,
+                  e.shiftKey,
+                  e.metaKey,
+                  e.button,
+                  null // no related element
+                )
+                iframe.dispatchEvent(evt);
+              }
+            }
+
+            var parent = element.parent();
+            var children = parent.children();
+            var index = ctrl.indexOfElement(element);
+            var splitbar = angular.element('<div ui-splitbar><a><span class="ui-splitbar-icon"></span></a><a><span class="ui-splitbar-icon"></span></a></div>');
+            if(0 < index && !ctrl.hasSplitbarBefore(scope.container)) {
+              angular.element(children[index-1]).after(splitbar);
+              $compile(splitbar)(scope);
+            } else if(index < children.length - 1) {
+              element.after(splitbar);
+              $compile(splitbar)(scope);
+            }
           }
         }
         toBeCollapsed--;
